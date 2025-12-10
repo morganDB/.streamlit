@@ -618,7 +618,6 @@ elif page == "Referensi data":
         st.markdown("**Tabel petugas**")
         st.dataframe(df_pt, use_container_width=True)
 
-
     with tab_judul:
         df_pt = load_judul()
         st.markdown("**Tabel judul**")

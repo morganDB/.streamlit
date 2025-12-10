@@ -54,9 +54,9 @@ st.set_page_config(
 # CSS sederhana untuk header dan kartu ringkasan
 st.markdown(
     """
-    <style>
+ <style>
     .main-header {
-        background: linear-gradient(90deg, #6366F1, #22C55E);
+        background: linear-gradient(90deg, #2A004E, #500073, #C62300, #F14A00);
         padding: 18px 24px;
         border-radius: 18px;
         color: white;
@@ -65,13 +65,13 @@ st.markdown(
     .metric-card {
         padding: 16px 18px;
         border-radius: 16px;
-        background: #0F172A;
-        border: 1px solid #1F2937;
-        box-shadow: 0 10px 30px rgba(15,23,42,0.6);
+        background: #500073;
+        border: 1px solid #C62300;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     }
     .metric-label {
         font-size: 0.8rem;
-        color: #9CA3AF;
+        color: #E5E7EB;
         text-transform: uppercase;
         letter-spacing: 0.08em;
     }
@@ -82,7 +82,7 @@ st.markdown(
     }
     .metric-sub {
         font-size: 0.8rem;
-        color: #6B7280;
+        color: #D1D5DB;
     }
     </style>
     """,
@@ -548,6 +548,24 @@ elif page == "Buku":
         df_buku_view = df_buku_view[
             df_buku_view["judul"].str.contains(search_judul, case=False, na=False)
         ]
+    
+    # Atur urutan kolom: kode_judul, kode_klasifikasi, kode_pengarang
+    # diletakkan sebelum kolom eksemplar
+    cols_order = [
+        "id_buku",
+        "kode_judul",
+        "judul",
+        "kode_klasifikasi",
+        "kategori_buku",
+        "kode_pengarang",
+        "tahun_terbit",
+        "isbn",
+        "status_buku",
+        "eksemplar",
+    ]
+    existing_cols = [c for c in cols_order if c in df_buku_view.columns]
+    df_buku_view = df_buku_view[existing_cols]
+
 
     # Filter kategori dan status buku
     kategori_list = ["(Semua)"] + sorted(df_buku["kategori_buku"].dropna().unique().tolist())

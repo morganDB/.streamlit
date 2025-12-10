@@ -1,7 +1,7 @@
 [theme]
-base = "dark"             
-primaryColor = "#6366F1"
-backgroundColor = "#020617"
-secondaryBackgroundColor = "#0F172A"
+base = "dark"
+primaryColor = "#F14A00"              # warna aksen utama (button, slider, dll.)
+backgroundColor = "#2A004E"           # background utama
+secondaryBackgroundColor = "#500073"  # background sidebar / container
 textColor = "#F9FAFB"
 font = "sans serif"

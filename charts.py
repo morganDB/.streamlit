@@ -1,40 +1,81 @@
 """
 charts.py
-Fungsi-fungsi untuk membuat grafik menggunakan Plotly.
-
-Grafik yang digunakan:
-- Bar chart
-- Line chart
-- Pie / donut chart
-- Histogram
-
-Tidak menggunakan boxplot dan heatmap agar lebih mudah dipahami saat presentasi.
+Modul berisi fungsi-fungsi pembuat grafik menggunakan Plotly.
+Setiap fungsi menerima DataFrame dan mengembalikan objek figure.
 """
 
-import pandas as pd
 import plotly.express as px
+import pandas as pd
 
-# Pemetaan warna fakultas ITK
-FAKULTAS_COLOR_MAP = {
-    "Fakultas Rekayasa dan Teknologi Industri": "#EF4444",   # merah
-    "Fakultas Pembangunan Berkelanjutan": "#22C55E",        # hijau
-    "Fakultas Sains dan Teknologi Informasi": "#3B82F6",    # biru
-}
+# =====================================================================
+# PALET WARNA & FUNGSI BANTU LAYOUT
+# =====================================================================
+
+# Warna brand gelap (dipakai sedikit untuk aksen)
+BRAND_DARK = ["#2A004E", "#500073", "#C62300", "#F14A00"]
+
+# Versi lebih terang / kontras supaya kelihatan di background gelap
+BRAND_BRIGHT = [
+    "#C4B5FD",  # ungu muda
+    "#8B5CF6",  # ungu terang
+    "#FB923C",  # oranye muda
+    "#F97316",  # oranye terang
+]
+
+# Gradien ungu → oranye buat continuous color (misal pakai "jumlah")
+BRAND_GRADIENT = ["#C4B5FD", "#8B5CF6", "#FB923C", "#F97316"]
 
 
-# ==============================
-# Grafik untuk halaman Ringkasan
-# ==============================
+def apply_common_layout(fig, title: str | None = None):
+    """
+    Terapkan layout standar supaya semua grafik konsisten
+    dengan tema ungu-oranye dan background gelap.
+    """
+    if title:
+        fig.update_layout(title=title)
+
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",   # transparan, ikut tema Streamlit
+        paper_bgcolor="rgba(0,0,0,0)",
+        font_color="#F9FAFB",           # teks putih lembut
+        title_font=dict(size=18, color="#F9FAFB"),
+        legend=dict(
+            bgcolor="rgba(15,23,42,0.85)",
+            bordercolor="rgba(148,163,184,0.4)",
+            borderwidth=1,
+            font=dict(color="#E5E7EB"),
+        ),
+        xaxis=dict(
+            gridcolor="rgba(148,163,184,0.18)",
+            zerolinecolor="rgba(148,163,184,0.35)",
+            linecolor="rgba(148,163,184,0.45)",
+            tickfont=dict(color="#E5E7EB"),
+            title_font=dict(color="#F9FAFB"),
+        ),
+        yaxis=dict(
+            gridcolor="rgba(148,163,184,0.18)",
+            zerolinecolor="rgba(148,163,184,0.35)",
+            linecolor="rgba(148,163,184,0.45)",
+            tickfont=dict(color="#E5E7EB"),
+            title_font=dict(color="#F9FAFB"),
+        ),
+        margin=dict(t=60, r=20, b=60, l=70),
+    )
+    return fig
+
+
+# =====================================================================
+# GRAFIK UNTUK HALAMAN RINGKASAN / PEMINJAMAN
+# =====================================================================
 
 def chart_tren_bulanan_status(df_pinjam: pd.DataFrame):
     """
-    Grafik batang bertumpuk jumlah peminjaman per bulan berdasarkan status peminjaman.
+    Grafik batang bertumpuk (stacked bar) jumlah peminjaman per bulan
+    berdasarkan status peminjaman (Sedang dipinjam / Selesai / dll).
     """
     df = df_pinjam.copy()
-    if df.empty:
-        return None
-
     df["bulan"] = df["tgl_pinjam"].dt.to_period("M").astype(str)
+
     per_bulan_status = (
         df.groupby(["bulan", "status_peminjaman"])
           .size()
@@ -47,11 +88,12 @@ def chart_tren_bulanan_status(df_pinjam: pd.DataFrame):
         y="jumlah",
         color="status_peminjaman",
         barmode="stack",
-        title="Perkembangan peminjaman per bulan berdasarkan status",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(bulan="Bulan", jumlah="Jumlah peminjaman",
+                    status_peminjaman="Status peminjaman"),
     )
-    fig.update_layout(
-        xaxis_title="Bulan",
-        yaxis_title="Jumlah peminjaman",
+    apply_common_layout(
+        fig, "Perkembangan peminjaman per bulan berdasarkan status"
     )
     return fig
 
@@ -59,34 +101,26 @@ def chart_tren_bulanan_status(df_pinjam: pd.DataFrame):
 def chart_peminjaman_per_fakultas(df_pinjam: pd.DataFrame):
     """
     Grafik batang jumlah peminjaman per fakultas.
+    Mengembalikan fig dan data agregat per_fak untuk insight tambahan.
     """
-    df = df_pinjam.copy()
-    if "nama_fakultas" not in df.columns:
-        return None, pd.DataFrame()
-
     per_fak = (
-        df.groupby("nama_fakultas")
-          .size()
-          .reset_index(name="jumlah")
-          .sort_values("jumlah", ascending=False)
+        df_pinjam
+        .groupby("nama_fakultas")
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("jumlah", ascending=False)
     )
-
-    if per_fak.empty:
-        return None, per_fak
 
     fig = px.bar(
         per_fak,
         x="nama_fakultas",
         y="jumlah",
         color="nama_fakultas",
-        color_discrete_map=FAKULTAS_COLOR_MAP,
-        title="Peminjaman per fakultas",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(nama_fakultas="Fakultas", jumlah="Jumlah peminjaman"),
     )
-    fig.update_layout(
-        xaxis_title="Fakultas",
-        yaxis_title="Jumlah peminjaman",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Peminjaman per fakultas")
+    fig.update_xaxes(tickangle=-20)
     return fig, per_fak
 
 
@@ -94,15 +128,12 @@ def chart_peminjaman_per_kategori(df_pinjam: pd.DataFrame):
     """
     Donut chart peminjaman berdasarkan kategori buku.
     """
-    df = df_pinjam.copy()
-    if "kategori_buku" not in df.columns:
-        return None, pd.DataFrame()
-
     per_kat = (
-        df.groupby("kategori_buku")
-          .size()
-          .reset_index(name="jumlah")
-          .sort_values("jumlah", ascending=False)
+        df_pinjam
+        .groupby("kategori_buku")
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("jumlah", ascending=False)
     )
 
     if per_kat.empty:
@@ -112,10 +143,16 @@ def chart_peminjaman_per_kategori(df_pinjam: pd.DataFrame):
         per_kat,
         names="kategori_buku",
         values="jumlah",
-        hole=0.4,
-        title="Peminjaman per kategori buku",
+        hole=0.55,
+        color="kategori_buku",
+        color_discrete_sequence=BRAND_BRIGHT,
     )
-    fig.update_traces(textposition="inside", textinfo="percent+label")
+    apply_common_layout(fig, "Peminjaman per kategori buku")
+    fig.update_traces(
+        textinfo="percent+label",
+        textposition="inside",
+        textfont=dict(color="#0F172A", size=12),
+    )
     return fig, per_kat
 
 
@@ -126,51 +163,64 @@ def chart_durasi_rata_per_fakultas(df_pinjam: pd.DataFrame):
     df = df_pinjam.copy()
     df = df[df["durasi_peminjaman"].notna()]
 
-    if df.empty or "nama_fakultas" not in df.columns:
-        return None, pd.DataFrame()
+    if df.empty:
+        return None, df
 
     durasi_fak = (
         df.groupby("nama_fakultas")["durasi_peminjaman"]
-          .mean()
-          .reset_index(name="rata_durasi")
-          .sort_values("rata_durasi", ascending=False)
+        .mean()
+        .reset_index(name="rata_durasi")
+        .sort_values("rata_durasi", ascending=False)
     )
-
-    if durasi_fak.empty:
-        return None, durasi_fak
 
     fig = px.bar(
         durasi_fak,
         x="nama_fakultas",
         y="rata_durasi",
         color="nama_fakultas",
-        color_discrete_map=FAKULTAS_COLOR_MAP,
-        title="Rata-rata durasi peminjaman per fakultas",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(
+            nama_fakultas="Fakultas",
+            rata_durasi="Rata-rata durasi (hari)",
+        ),
     )
-    fig.update_layout(
-        xaxis_title="Fakultas",
-        yaxis_title="Rata-rata durasi (hari)",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Rata-rata durasi peminjaman per fakultas")
+    fig.update_xaxes(tickangle=-20)
     return fig, durasi_fak
 
 
-# ==============================
-# Grafik untuk halaman Peminjaman
-# ==============================
+def chart_hist_durasi(df_pinjam: pd.DataFrame):
+    """
+    Histogram sederhana untuk distribusi durasi peminjaman.
+    Mudah dibaca: sumbu X = hari, sumbu Y = jumlah transaksi.
+    """
+    df = df_pinjam.copy()
+    df = df[df["durasi_peminjaman"].notna()]
+
+    if df.empty:
+        return None
+
+    fig = px.histogram(
+        df,
+        x="durasi_peminjaman",
+        nbins=10,
+        color_discrete_sequence=[BRAND_BRIGHT[2]],
+        labels=dict(durasi_peminjaman="Durasi peminjaman (hari)"),
+    )
+    apply_common_layout(fig, "Distribusi durasi peminjaman")
+    fig.update_yaxes(title_text="Jumlah peminjaman")
+    return fig
+
 
 def chart_peminjaman_per_status(df_filtered: pd.DataFrame):
     """
-    Grafik batang distribusi jumlah peminjaman per status peminjaman.
+    Grafik batang jumlah peminjaman per status (Dipinjam, Selesai, Hilang, Rusak, dst.).
     """
-    df = df_filtered.copy()
-    if "status_peminjaman" not in df.columns:
-        return None, pd.DataFrame()
-
     per_status = (
-        df.groupby("status_peminjaman")
-          .size()
-          .reset_index(name="jumlah")
+        df_filtered
+        .groupby("status_peminjaman")
+        .size()
+        .reset_index(name="jumlah")
     )
 
     if per_status.empty:
@@ -181,30 +231,27 @@ def chart_peminjaman_per_status(df_filtered: pd.DataFrame):
         x="status_peminjaman",
         y="jumlah",
         color="status_peminjaman",
-        title="Peminjaman per status peminjaman",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(
+            status_peminjaman="Status peminjaman",
+            jumlah="Jumlah peminjaman",
+        ),
     )
-    fig.update_layout(
-        xaxis_title="Status peminjaman",
-        yaxis_title="Jumlah peminjaman",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Peminjaman per status peminjaman")
     return fig, per_status
 
 
 def chart_top5_judul(df_filtered: pd.DataFrame):
     """
-    Grafik batang horizontal untuk lima judul buku dengan frekuensi peminjaman tertinggi.
+    Grafik batang horizontal untuk lima judul buku
+    dengan frekuensi peminjaman tertinggi.
     """
-    df = df_filtered.copy()
-    if "judul" not in df.columns:
-        return None, pd.DataFrame()
-
     top_judul = (
-        df.groupby("judul")
-          .size()
-          .reset_index(name="jumlah")
-          .sort_values("jumlah", ascending=False)
-          .head(5)
+        df_filtered.groupby("judul")
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("jumlah", ascending=False)
+        .head(5)
     )
 
     if top_judul.empty:
@@ -216,57 +263,29 @@ def chart_top5_judul(df_filtered: pd.DataFrame):
         y="judul",
         orientation="h",
         color="jumlah",
-        title="Lima judul buku dengan peminjaman tertinggi",
+        color_continuous_scale=BRAND_GRADIENT,
+        labels=dict(jumlah="Jumlah peminjaman", judul="Judul buku"),
     )
-    fig.update_layout(
-        xaxis_title="Jumlah peminjaman",
-        yaxis_title="Judul buku",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Lima judul buku dengan peminjaman tertinggi")
+    # Supaya judul paling banyak di atas
+    fig.update_layout(coloraxis_showscale=False)
     fig.update_yaxes(autorange="reversed")
     return fig, top_judul
 
 
-def chart_hist_durasi(df_filtered: pd.DataFrame):
-    """
-    Histogram distribusi durasi peminjaman.
-    Lebih mudah dijelaskan daripada boxplot.
-    """
-    df = df_filtered.copy()
-    df = df[df["durasi_peminjaman"].notna()]
+# =====================================================================
+# GRAFIK UNTUK HALAMAN ANGGOTA
+# =====================================================================
 
-    if df.empty:
-        return None
-
-    fig = px.histogram(
-        df,
-        x="durasi_peminjaman",
-        nbins=10,
-        title="Distribusi durasi peminjaman",
-    )
-    fig.update_layout(
-        xaxis_title="Durasi peminjaman (hari)",
-        yaxis_title="Jumlah peminjaman",
-    )
-    return fig
-
-
-# ==============================
-# Grafik untuk halaman Anggota
-# ==============================
-
-def chart_anggota_per_status(df_anggota: pd.DataFrame):
+def chart_anggota_per_status(df_anggota_view: pd.DataFrame):
     """
     Grafik batang jumlah anggota per status keanggotaan.
     """
-    df = df_anggota.copy()
-    if "status_anggota" not in df.columns:
-        return None
-
     per_status = (
-        df.groupby("status_anggota")
-          .size()
-          .reset_index(name="jumlah")
+        df_anggota_view
+        .groupby("status_anggota")
+        .size()
+        .reset_index(name="jumlah")
     )
 
     fig = px.bar(
@@ -274,29 +293,24 @@ def chart_anggota_per_status(df_anggota: pd.DataFrame):
         x="status_anggota",
         y="jumlah",
         color="status_anggota",
-        title="Jumlah anggota per status",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(status_anggota="Status anggota", jumlah="Jumlah anggota"),
     )
-    fig.update_layout(
-        xaxis_title="Status anggota",
-        yaxis_title="Jumlah anggota",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Jumlah anggota per status")
     return fig
 
 
-def chart_anggota_per_fakultas(df_anggota: pd.DataFrame):
+def chart_anggota_per_fakultas(df_anggota_view: pd.DataFrame):
     """
     Grafik batang jumlah anggota per fakultas.
+    (lebih mudah dibaca dibanding treemap).
     """
-    df = df_anggota.copy()
-    if "nama_fakultas" not in df.columns:
-        return None
-
     per_fak = (
-        df.groupby("nama_fakultas")
-          .size()
-          .reset_index(name="jumlah")
-          .sort_values("jumlah", ascending=False)
+        df_anggota_view
+        .groupby("nama_fakultas")
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("jumlah", ascending=False)
     )
 
     fig = px.bar(
@@ -304,34 +318,28 @@ def chart_anggota_per_fakultas(df_anggota: pd.DataFrame):
         x="nama_fakultas",
         y="jumlah",
         color="nama_fakultas",
-        color_discrete_map=FAKULTAS_COLOR_MAP,
-        title="Jumlah anggota per fakultas",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(nama_fakultas="Fakultas", jumlah="Jumlah anggota"),
     )
-    fig.update_layout(
-        xaxis_title="Fakultas",
-        yaxis_title="Jumlah anggota",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Jumlah anggota per fakultas")
+    fig.update_xaxes(tickangle=-20)
     return fig
 
 
-# ==============================
-# Grafik untuk halaman Buku
-# ==============================
+# =====================================================================
+# GRAFIK UNTUK HALAMAN BUKU
+# =====================================================================
 
-def chart_buku_per_kategori(df_buku: pd.DataFrame):
+def chart_buku_per_kategori(df_buku_view: pd.DataFrame):
     """
-    Grafik batang horizontal jumlah buku per kategori.
+    Grafik batang horizontal jumlah judul per kategori buku.
     """
-    df = df_buku.copy()
-    if "kategori_buku" not in df.columns:
-        return None
-
     per_kat = (
-        df.groupby("kategori_buku")
-          .size()
-          .reset_index(name="jumlah")
-          .sort_values("jumlah", ascending=False)
+        df_buku_view
+        .groupby("kategori_buku")
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("jumlah", ascending=True)
     )
 
     fig = px.bar(
@@ -340,55 +348,24 @@ def chart_buku_per_kategori(df_buku: pd.DataFrame):
         y="kategori_buku",
         orientation="h",
         color="kategori_buku",
-        title="Jumlah buku per kategori",
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels=dict(kategori_buku="Kategori buku", jumlah="Jumlah judul"),
     )
-    fig.update_layout(
-        xaxis_title="Jumlah buku",
-        yaxis_title="Kategori buku",
-        showlegend=False,
-    )
+    apply_common_layout(fig, "Jumlah buku per kategori")
     fig.update_yaxes(autorange="reversed")
     return fig
 
 
-def chart_buku_per_status(df_buku: pd.DataFrame):
-    """
-    Donut chart komposisi status koleksi buku (Tersedia, Dipinjam, Hilang, Rusak).
-    """
-    df = df_buku.copy()
-    if "status_buku" not in df.columns:
-        return None
-
-    per_status = (
-        df.groupby("status_buku")
-          .size()
-          .reset_index(name="jumlah")
-    )
-
-    fig = px.pie(
-        per_status,
-        names="status_buku",
-        values="jumlah",
-        hole=0.4,
-        title="Komposisi status koleksi buku",
-    )
-    fig.update_traces(textposition="inside", textinfo="percent+label")
-    return fig
-
-
-def chart_buku_per_tahun(df_buku: pd.DataFrame):
+def chart_buku_per_tahun(df_buku_view: pd.DataFrame):
     """
     Grafik garis jumlah buku per tahun terbit.
     """
-    df = df_buku.copy()
-    if "tahun_terbit" not in df.columns:
-        return None
-
     per_tahun = (
-        df.groupby("tahun_terbit")
-          .size()
-          .reset_index(name="jumlah")
-          .sort_values("tahun_terbit")
+        df_buku_view
+        .groupby("tahun_terbit")
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("tahun_terbit")
     )
 
     fig = px.line(
@@ -396,10 +373,47 @@ def chart_buku_per_tahun(df_buku: pd.DataFrame):
         x="tahun_terbit",
         y="jumlah",
         markers=True,
-        title="Jumlah buku per tahun terbit",
+        color_discrete_sequence=[BRAND_BRIGHT[1]],
+        labels=dict(tahun_terbit="Tahun terbit", jumlah="Jumlah judul"),
     )
-    fig.update_layout(
-        xaxis_title="Tahun terbit",
-        yaxis_title="Jumlah buku",
+    apply_common_layout(fig, "Jumlah buku per tahun terbit")
+    return fig
+
+def chart_buku_per_status(df_buku_view: pd.DataFrame):
+    """
+    Grafik batang jumlah buku per status (Tersedia, Dipinjam, Hilang, Rusak).
+    Kolom status bisa bernama 'status_buku' atau 'status', fungsi ini
+    otomatis menyesuaikan.
+    """
+    # Deteksi nama kolom status di DataFrame
+    if "status_buku" in df_buku_view.columns:
+        status_col = "status_buku"
+    elif "status" in df_buku_view.columns:
+        status_col = "status"
+    else:
+        # Kalau tidak ada kolom status sama sekali, kembalikan None
+        return None
+
+    per_status = (
+        df_buku_view
+        .groupby(status_col)
+        .size()
+        .reset_index(name="jumlah")
+        .sort_values("jumlah", ascending=False)
     )
+
+    fig = px.bar(
+        per_status,
+        x=status_col,
+        y="jumlah",
+        color=status_col,
+        color_discrete_sequence=BRAND_BRIGHT,
+        labels={
+            status_col: "Status buku",
+            "jumlah": "Jumlah buku"
+        },
+    )
+    apply_common_layout(fig, "Jumlah buku per status")
+    fig.update_xaxes(title_text="Status buku")
+    fig.update_yaxes(title_text="Jumlah buku")
     return fig

@@ -113,26 +113,55 @@ def load_anggota():
 @st.cache_data
 def load_buku():
     """
-    Mengambil data buku, sudah digabung dengan judul dan klasifikasi.
-    Dipakai di halaman 'Buku'.
+    Mengambil data koleksi buku beserta:
+    - kode_judul & judul
+    - kode_klasifikasi & kategori_buku
+    - kode_pengarang (bisa lebih dari satu, digabung dengan koma)
+    - tahun terbit, ISBN, status, dan eksemplar
+
+    Sumber: tabel buku, judul, klasifikasi, buku_pengarang, pengarang.
     """
     conn = get_connection()
     query = """
         SELECT
             b.id_buku,
+            j.kode_judul,
             j.judul,
+            k.kode_klasifikasi,
             k.kategori_buku,
+            -- bisa lebih dari satu pengarang per buku
+            GROUP_CONCAT(pg.kode_pengarang
+                         ORDER BY bp.urutan_pengarang
+                         SEPARATOR ', ') AS kode_pengarang,
             b.tahun_terbit,
             b.isbn,
             b.status AS status_buku,
             b.eksemplar
         FROM buku b
-        JOIN judul j ON b.id_judul = j.id_judul
-        JOIN klasifikasi k ON b.id_klasifikasi = k.id_klasifikasi
+        JOIN judul j
+            ON b.id_judul = j.id_judul
+        JOIN klasifikasi k
+            ON b.id_klasifikasi = k.id_klasifikasi
+        LEFT JOIN buku_pengarang bp
+            ON b.id_buku = bp.id_buku
+        LEFT JOIN pengarang pg
+            ON bp.id_pengarang = pg.id_pengarang
+        GROUP BY
+            b.id_buku,
+            j.kode_judul,
+            j.judul,
+            k.kode_klasifikasi,
+            k.kategori_buku,
+            b.tahun_terbit,
+            b.isbn,
+            b.status,
+            b.eksemplar
+        ORDER BY b.id_buku;
     """
     df = pd.read_sql(query, conn)
     conn.close()
     return df
+
 
 
 @st.cache_data

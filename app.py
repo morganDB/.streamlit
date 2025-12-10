@@ -254,6 +254,18 @@ if page == "Ringkasan":
                 f"{fak_durasi_top['nama_fakultas']} "
                 f"dengan rata-rata {fak_durasi_top['rata_durasi']:.1f} hari."
             )
+    with st.expander("Penjelasan dan kesimpulan halaman Ringkasan"):
+        st.markdown(
+            """
+            - Halaman ini memberikan gambaran besar aktivitas perpustakaan.
+            - Kartu KPI di atas merangkum **jumlah peminjaman**, **anggota aktif**, **buku yang dipinjam**, dan **total denda**.
+            - Grafik tren bulanan digunakan untuk melihat periode ramainya peminjaman dan bulan puncak aktivitas.
+            - Grafik per fakultas menunjukkan fakultas mana yang paling banyak dan paling sedikit memanfaatkan perpustakaan.
+            - Grafik per kategori buku membantu menentukan kategori koleksi yang perlu diprioritaskan pengadaannya.
+            - Grafik rata-rata durasi per fakultas menunjukkan kecenderungan lama peminjaman di setiap fakultas.
+            - Secara keseluruhan, halaman ini menjawab: *“Siapa yang memakai perpustakaan, kapan, dan bagaimana pola peminjaman terjadi?”*.
+            """
+        )
 
 # ======================================================
 # HALAMAN: PEMINJAMAN
@@ -400,34 +412,47 @@ elif page == "Peminjaman":
             "- Jika peminjaman melewati batas tersebut, maka dikenakan denda per hari keterlambatan.\n"
             "- Kolom **denda_buku** pada tabel ini berisi nilai denda yang sudah dihitung sesuai skenario dummy."
         )
-
-    # ----------------- Contoh query SQL -----------------
-    with st.expander("Contoh query SQL (JOIN beberapa tabel)"):
-        st.code(
+ 
+    with st.expander("Penjelasan dan kesimpulan halaman Peminjaman"):
+        st.markdown(
             """
-SELECT
-    p.id_peminjaman,
-    a.nama_anggota,
-    j.judul,
-    f.nama_fakultas,
-    p.tgl_pinjam,
-    p.tgl_kembali,
-    p.denda_buku
-FROM peminjaman p
-JOIN anggota a ON p.id_anggota = a.id_anggota
-LEFT JOIN program_studi ps ON a.id_prodi = ps.id_prodi
-LEFT JOIN fakultas f ON ps.id_fakultas = f.id_fakultas
-JOIN buku b ON p.id_buku = b.id_buku
-JOIN judul j ON b.id_judul = j.id_judul
-ORDER BY p.tgl_pinjam DESC;
-            """,
-            language="sql",
+            - Filter di sidebar memungkinkan analisis peminjaman yang sangat spesifik (berdasarkan tanggal, fakultas, prodi, status anggota, status peminjaman, dan kategori buku).
+            - Tabel hasil filter dapat diunduh sehingga memudahkan proses pelaporan dan analisis lanjutan.
+            - Indikator di bawah tabel merangkum **jumlah peminjaman**, **total denda**, dan **rata-rata durasi peminjaman**.
+            - Grafik status peminjaman memperlihatkan komposisi transaksi yang masih dipinjam, sudah kembali, hilang, atau rusak.
+            - Grafik lima judul terlaris membantu mengidentifikasi buku yang paling sering digunakan dan mungkin perlu penambahan eksemplar.
+            - Histogram durasi menunjukkan pola lama peminjaman, sehingga bisa dievaluasi apakah aturan masa pinjam sudah efektif.
+            - Contoh query JOIN di bagian bawah menunjukkan pemahaman relasi antar tabel dan siap digunakan ketika penggabungan tabel tertentu.
+            - Kesimpulan: halaman ini menjadi pusat analisis transaksi.
+            """
         )
-        st.caption(
-            "Query ini menggabungkan tabel peminjaman, anggota, program studi, fakultas, "
-            "buku, dan judul untuk menampilkan riwayat peminjaman beserta identitas anggota "
-            "dan informasi buku."
-        )
+
+    with st.expander("Contoh query SQL (JOIN beberapa tabel)"):
+            st.code(
+                """
+    SELECT
+        p.id_peminjaman,
+        a.nama_anggota,
+        j.judul,
+        f.nama_fakultas,
+        p.tgl_pinjam,
+        p.tgl_kembali,
+        p.denda_buku
+    FROM peminjaman p
+    JOIN anggota a ON p.id_anggota = a.id_anggota
+    LEFT JOIN program_studi ps ON a.id_prodi = ps.id_prodi
+    LEFT JOIN fakultas f ON ps.id_fakultas = f.id_fakultas
+    JOIN buku b ON p.id_buku = b.id_buku
+    JOIN judul j ON b.id_judul = j.id_judul
+    ORDER BY p.tgl_pinjam DESC;
+                """,
+                language="sql",
+            )
+            st.caption(
+                "Query ini menggabungkan tabel peminjaman, anggota, program studi, fakultas, "
+                "buku, dan judul untuk menampilkan riwayat peminjaman beserta identitas anggota "
+                "dan informasi buku."
+            )
 
 # ======================================================
 # HALAMAN: ANGGOTA
@@ -485,6 +510,18 @@ elif page == "Anggota":
         st.subheader("Jumlah anggota per fakultas")
         fig_fak = chart_anggota_per_fakultas(df_anggota_view)
         st.plotly_chart(fig_fak, use_container_width=True)
+
+    with st.expander("Penjelasan dan kesimpulan halaman Anggota"):
+        st.markdown(
+            """
+            - Tabel anggota menampilkan data lengkap pengguna perpustakaan: nama, status, program studi, dan fakultas.
+            - Fitur pencarian memudahkan petugas ketika ingin mengecek anggota tertentu secara cepat.
+            - Grafik **anggota per status** menunjukkan komposisi mahasiswa, dosen, dan tendik yang terdaftar sebagai anggota.
+            - Grafik **anggota per fakultas** menggambarkan sebaran basis pengguna di seluruh fakultas.
+            - Dari dua grafik ini, perpustakaan dapat menilai apakah ada fakultas atau kategori pengguna yang masih perlu ditingkatkan pemanfaatannya.
+            - Kesimpulan: halaman ini menjawab siapa saja yang menjadi target layanan perpustakaan dan bagaimana distribusi mereka.
+            """
+        )
 
 # ======================================================
 # HALAMAN: BUKU
@@ -578,6 +615,19 @@ elif page == "Buku":
     fig_th = chart_buku_per_tahun(df_buku_view)
     st.plotly_chart(fig_th, use_container_width=True)
 
+    with st.expander("Penjelasan dan kesimpulan halaman Buku"):
+        st.markdown(
+            """
+            - Tabel buku menampilkan detail koleksi: judul, kode judul, kode klasifikasi, kategori, kode pengarang, tahun terbit, ISBN, status, dan eksemplar.
+            - Filter kategori dan status memudahkan analisis koleksi tertentu, misalnya hanya melihat buku yang hilang atau rusak.
+            - Grafik **buku per kategori** menunjukkan keseimbangan koleksi antar bidang ilmu.
+            - Grafik **status koleksi** memperlihatkan proporsi buku yang tersedia, sedang dipinjam, hilang, dan rusak.
+            - Grafik **buku per tahun terbit** membantu menilai seberapa mutakhir koleksi dan kapan perlu dilakukan pengadaan buku baru.
+            - Kesimpulan: halaman ini berfungsi sebagai dashboard kondisi koleksi dan dasar perencanaan pengembangan perpustakaan.
+            """
+        )
+
+
 # ======================================================
 # HALAMAN: REFERENSI DATA
 # ======================================================
@@ -627,3 +677,19 @@ elif page == "Referensi data":
         df_pt = load_klasifikasi()
         st.markdown("**Tabel klasifikasi**")
         st.dataframe(df_pt, use_container_width=True)
+
+    with st.expander("Penjelasan dan kesimpulan halaman Referensi data"):
+        st.markdown(
+            """
+            - Halaman ini menampilkan tabel referensi: **fakultas**, **program studi**, **pengarang**, **buku–pengarang**, **petugas**, **judul**, dan **klasifikasi**.
+            - Tabel-tabel ini digunakan sebagai acuan relasi pada ERD dan menjadi dasar seluruh query JOIN yang digunakan di dashboard.
+            - Contoh relasi:
+            - `program_studi.id_fakultas` → `fakultas.id_fakultas`
+            - `buku_pengarang.id_buku` → `buku.id_buku`
+            - `buku_pengarang.id_pengarang` → `pengarang.id_pengarang`
+            - `peminjaman.id_petugas` → `petugas.id_petugas`
+            - Dengan menampilkan semua referensi di satu halaman, dosen dapat melihat bahwa desain basis data sudah ternormalisasi dan konsisten.
+            - Kesimpulan: halaman ini digunakan untuk mendukung penjelasan ERD, struktur tabel, dan dasar dari seluruh visualisasi di halaman lain.
+            """
+        )
+
